@@ -10,6 +10,24 @@
             "args": [
                 // Ask msbuild to generate full paths for file names.
                 "-g",
+                "-std=c++11",
+                "${file}",
+                "-o",
+              "${fileDirname}\\${fileBasenameNoExtension}.exe"
+            ],
+             "problemMatcher": [
+                 "$gcc"
+             ],
+             "group": "build"
+        },
+        {
+            "label": "task release g++",
+            "type": "shell",
+            "command": "g++",
+            "args": [
+                // Ask msbuild to generate full paths for file names.
+                "-O3",
+                "-std=c++11",
                 "${file}",
                 "-o",
               "${fileDirname}\\${fileBasenameNoExtension}.exe"
