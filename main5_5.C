@@ -75,10 +75,10 @@ int main()
 
 
     vector<scheme*> sct;
-    sct.push_back(new elliptic::pointJacobi(m, 1, tolgx, 1, gy1, eqn));
-    sct.push_back(new elliptic::pointGaussSeidel(m, 1, tolgx, 1, gy1, eqn));
-    sct.push_back(new elliptic::lineJacobi<D_Y>(m, 1, tolgx, 1, gy1, eqn));
-    sct.push_back(new elliptic::gaussSeidelLineRelaxation<D_Y>(m, 1, tolgx, 1, gy1, eqn));
+    //sct.push_back(new elliptic::pointJacobi(m, 1, tolgx, 1, gy1, eqn));
+    //sct.push_back(new elliptic::pointGaussSeidel(m, 1, tolgx, 1, gy1, eqn));
+    //sct.push_back(new elliptic::lineJacobi<D_Y>(m, 1, tolgx, 1, gy1, eqn));
+    //sct.push_back(new elliptic::gaussSeidelLineRelaxation<D_Y>(m, 1, tolgx, 1, gy1, eqn));
     sct.push_back(new elliptic::ADITwoSteps(m, 1, tolgx, 1, gy1, eqn));
 
     //elliptic::pointJacobi sc(m, 1, 50, 1, 50, eqn);
@@ -92,12 +92,11 @@ int main()
     solver.setBoundary(top);
     solver.setBoundary(right);
     solver.setBoundary(bottom);
-    solver.setTol(1e-6);
+    solver.setTol(1e-7);
 
     vector<vector<double>> toltable(5);
-    for (int i = 0;i < 5;i++)
+    for (int i = 0;i < sct.size();i++)
     {
-
         solver.setScheme(*sct[i]);
         solver.solve(toltable[i]);
     }
@@ -106,9 +105,40 @@ int main()
     for (int i = 0;i < tolgx - 1;i++)
     {
         u[i] = v_inf + (m.now()[i + 2][0] - m.now()[i][0]) / (m.x()[i + 2] - m.x()[i]);
-        v[i] = (m.now()[i + 1][1] - m.now()[i + 1][0]) / (m.y()[1] - m.x()[0]);
+        v[i] = (m.now()[i + 1][1] - m.now()[i + 1][0]) / (m.y()[1] - m.y()[0]);
         p[i] = p_inf * pow(1 - (gamma - 1) / 2.0 * m_inf * m_inf * ((u[i] * u[i] + v[i] * v[i]) / (v_inf * v_inf) - 1), gamma / (gamma - 1));
         cp[i] = (p[i] - p_inf) / (0.5 * rho_inf * v_inf * v_inf);
+    }
+    vector<vector<double>> fu(tolgx - 1), fv(tolgx - 1), fa(tolgx - 1), fm(tolgx - 1);
+    for (int i = 0;i < tolgx - 1;i++)
+    {
+        fu[i].resize(gy1);
+        fv[i].resize(gy1);
+        fa[i].resize(gy1);
+        fm[i].resize(gy1);
+        for (int j = 0;j < gy1;j++)
+        {
+            if (j == 0)
+            {
+                fu[i][j] = v_inf + (m.now()[i + 2][j] - m.now()[i][j]) / (m.x()[i + 2] - m.x()[i]);
+                fv[i][j] = (m.now()[i + 1][j + 1] - m.now()[i + 1][j]) / (m.y()[j + 1] - m.y()[j]);
+            }
+            else
+            {
+                fu[i][j] = v_inf + (m.now()[i + 2][j + 1] - m.now()[i][j + 1]) / (m.x()[i + 2] - m.x()[i]);
+                fv[i][j] = (m.now()[i + 1][j + 2] - m.now()[i + 1][j]) / (m.y()[j + 2] - m.y()[j]);
+            }
+            fa[i][j] = sqrt(gamma * p_inf / rho_inf * (1 - (gamma - 1) / 2.0 * m_inf * m_inf * ((fu[i][j] * fu[i][j] + fv[i][j] * fv[i][j]) / (v_inf * v_inf) - 1)));
+            fm[i][j] = sqrt((fu[i][j] * fu[i][j] + fv[i][j] * fv[i][j])) / fa[i][j];
+            //p[i] = p_inf * pow(1 - (gamma - 1) / 2.0 * m_inf * m_inf * ((u[i] * u[i] + v[i] * v[i]) / (v_inf * v_inf) - 1), gamma / (gamma - 1));
+            //cp[i] = (p[i] - p_inf) / (0.5 * rho_inf * v_inf * v_inf);
+        }
+    }
+    ofstream foutfull("vfull5-1.csv");
+    for (int i = 0;i < tolgx - 1;i++)
+    {
+        for (int j = 0;j < gy1;j++)
+            foutfull << m.x()[i + 1] << "," << m.y()[j] << "," << fu[i][j] << "," << fv[i][j] <<","<<fm[i][j] <<endl;
     }
 
     /*
@@ -118,19 +148,20 @@ int main()
                 cout << m.value[i][j] << endl;
             }
     */
-    ofstream fout("cp5-1.csv");
+    ofstream fout("cp5-1_p.csv");
     for (int i = 0; i < tolgx - 1; i++)
     {
         fout << m.x()[i + 1] << "," << u[i] << "," << v[i] << "," << cp[i] << "," << m.now()[i][0] << endl;
     }
-    ofstream fout2("res5-1.csv");
+    /*
+    ofstream fout2("res5-1_p.csv");
     for (int i = 0; i < 1000; i++)
     {
-        for (int j = 0; j < 5; j++) {
+        for (int j = 0; j < 2; j++) {
             fout2<<toltable[j][i]<<",";
         }
         fout2<<endl;
-    }
+    }*/
 
     cin.get();
     return 0;

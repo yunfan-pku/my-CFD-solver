@@ -8,7 +8,7 @@
 using namespace std;
 using namespace linesplit;
 using namespace Eigen;
-
+/*
 namespace p5 {
     const double gamma = 1.4;
     const double rho_inf = 1;
@@ -26,7 +26,7 @@ namespace p5 {
     {
         return x * v_inf;
     }
-}
+}*/
 
 namespace p6 {
     const double gamma = 1.4;
@@ -72,7 +72,7 @@ int main()
     int gy1 = 50;
 
     int tolgx = gx1 + gx2 + gx3;
-    
+
     mesh<1>  m(tolgx + 1, gy1 + 1);
 
     m.x()[0] = -50;
@@ -100,6 +100,7 @@ int main()
     bottom.update();
     transonicSmallDisturbanceEuqation eqn(p6::m_inf, p6::v_inf, m);
 
+    vector<double> toltable;
     //elliptic::pointJacobi sc(m, 1, 50, 1, 50, eqn);
     //elliptic::pointGaussSeidel sc(m, 1, 50, 1, 50, eqn);
     //elliptic::lineJacobi<D_X> sc(m, 1, 50, 1, 50, eqn);
@@ -110,77 +111,97 @@ int main()
     solver.setBoundary(top);
     solver.setBoundary(right);
     solver.setBoundary(bottom);
-    solver.setTol(1e-5);
-    solver.solve();
-/*
-    cin.get();
-
-    transonicSmallDisturbanceEuqation eqn2(p5::m_inf, p5::v_inf, m);
-    transonicSmallDisturbance::gaussSeidelLineRelaxation sc2(m, 1, tolgx, 1, gy1, eqn2);
-    solverManger solver2(m, sc2);
-    solver2.setBoundary(left);
-    solver2.setBoundary(top);
-    solver2.setBoundary(right);
-    Neumann bottom2(m, 1, tolgx, 0, 1, 0, 1, p5::dphidy);
-    solver2.setBoundary(bottom2);
-    solver2.setTol(1e-6);
-
-    for (int i = 0;i <= tolgx;i++)
-        for (int j = 0;j <= gy1;j++)
-            m.now()[i][j] *= p5::v_inf;
-
-    solver2.solve();
-    */
-
-
-
-
-
-
-
+    solver.setTol(1e-6);
+    solver.solve(toltable);
     /*
-    double re=sc.residual();
-    for (int i = 0;re > 1e-4;i++)
-    {
-        re=sc.residual();
-        cout << i << " " << re << endl;
-        sc.execute();
-        bottom.update();
-    }*/
+        cin.get();
+
+        transonicSmallDisturbanceEuqation eqn2(p5::m_inf, p5::v_inf, m);
+        transonicSmallDisturbance::gaussSeidelLineRelaxation sc2(m, 1, tolgx, 1, gy1, eqn2);
+        solverManger solver2(m, sc2);
+        solver2.setBoundary(left);
+        solver2.setBoundary(top);
+        solver2.setBoundary(right);
+        Neumann bottom2(m, 1, tolgx, 0, 1, 0, 1, p5::dphidy);
+        solver2.setBoundary(bottom2);
+        solver2.setTol(1e-6);
+
+        for (int i = 0;i <= tolgx;i++)
+            for (int j = 0;j <= gy1;j++)
+                m.now()[i][j] *= p5::v_inf;
+
+        solver2.solve();
+        */
 
     vector<double> u(tolgx - 1), v(tolgx - 1), p(tolgx - 1), cp(tolgx - 1);
     for (int i = 0;i < tolgx - 1;i++)
     {
         u[i] = p6::v_inf + (m.now()[i + 2][0] - m.now()[i][0]) / (m.x()[i + 2] - m.x()[i]);
-        v[i] = (m.now()[i + 1][1] - m.now()[i + 1][0]) / (m.y()[1] - m.x()[0]);
+        v[i] = (m.now()[i + 1][1] - m.now()[i + 1][0]) / (m.y()[1] - m.y()[0]);
         p[i] = p6::p_inf * pow(1 - (p6::gamma - 1) / 2.0 * p6::m_inf * p6::m_inf * ((u[i] * u[i] + v[i] * v[i]) / (p6::v_inf * p6::v_inf) - 1), p6::gamma / (p6::gamma - 1));
         cp[i] = (p[i] - p6::p_inf) / (0.5 * p6::rho_inf * p6::v_inf * p6::v_inf);
-        // cout << i << " " << m.y[i] << endl;
+    }
+    vector<vector<double>> fu(tolgx - 1), fv(tolgx - 1), fa(tolgx - 1), fm(tolgx - 1);
+    for (int i = 0;i < tolgx - 1;i++)
+    {
+        fu[i].resize(gy1);
+        fv[i].resize(gy1);
+        fa[i].resize(gy1);
+        fm[i].resize(gy1);
+        for (int j = 0;j < gy1;j++)
+        {
+            if (j == 0)
+            {
+                fu[i][j] = p6::v_inf + (m.now()[i + 2][j] - m.now()[i][j]) / (m.x()[i + 2] - m.x()[i]);
+                fv[i][j] = (m.now()[i + 1][j + 1] - m.now()[i + 1][j]) / (m.y()[j + 1] - m.y()[j]);
+            }
+            else
+            {
+                fu[i][j] = p6::v_inf + (m.now()[i + 2][j + 1] - m.now()[i][j + 1]) / (m.x()[i + 2] - m.x()[i]);
+                fv[i][j] = (m.now()[i + 1][j + 2] - m.now()[i + 1][j]) / (m.y()[j + 2] - m.y()[j]);
+            }
+            fa[i][j] = sqrt(p6::gamma * p6::p_inf / p6::rho_inf * (1 - (p6::gamma - 1) / 2.0 * p6::m_inf * p6::m_inf * ((fu[i][j] * fu[i][j] + fv[i][j] * fv[i][j]) / (p6::v_inf * p6::v_inf) - 1)));
+            fm[i][j] = sqrt((fu[i][j] * fu[i][j] + fv[i][j] * fv[i][j])) / fa[i][j];
+            //p[i] = p_inf * pow(1 - (gamma - 1) / 2.0 * m_inf * m_inf * ((u[i] * u[i] + v[i] * v[i]) / (v_inf * v_inf) - 1), gamma / (gamma - 1));
+            //cp[i] = (p[i] - p_inf) / (0.5 * rho_inf * v_inf * v_inf);
+        }
+    }
+    ofstream foutfull("vfull6m7.csv");
+    for (int i = 0;i < tolgx - 1;i++)
+    {
+        for (int j = 0;j < gy1;j++)
+            foutfull << m.x()[i + 1] << "," << m.y()[j] << "," << fu[i][j] << "," << fv[i][j] <<","<<fm[i][j] <<endl;
     }
 
-
-
-
-    /*    for (int i = 0; i < 51; i++)
-            for (int j = 0; j < 51; j++) {
-                m.value[i][j] = i * 51 + j;
-            }
-    */
     /*
         for (int i = 0; i < 51; i++)
             for (int j = 0; j < 1; j++)
             {
                 cout << m.value[i][j] << endl;
             }
-            */
- 
-    ofstream fout("cp6.csv");
+    */
+
+    /*
+        for (int i = 0; i < 51; i++)
+            for (int j = 0; j < 1; j++)
+            {
+                cout << m.value[i][j] << endl;
+            }
+    */
+/*
+    ofstream fout("cp6-1m9.csv");
     for (int i = 0; i < tolgx - 1; i++)
     {
         fout << m.x()[i + 1] << "," << u[i] << "," << v[i] << "," << cp[i] << "," << m.now()[i][0] << endl;
     }
+    ofstream fout2("res6-1m9.csv");
+    for (auto i : toltable)
+    {
+        fout2 << i << endl;
 
+    }
 
+*/
 
     cin.get();
     return 0;
